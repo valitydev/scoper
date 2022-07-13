@@ -14,7 +14,7 @@ Scoooper!
 ```
 
 ## Usage
-* Scope log metadata along the process call stack, wrapping functions in [scoper](src/scoper.erl)`:scope/2,3`. _Scope name_ should be an atom, _metadata_ is a map with atom keys. The types:
+* Scope log metadata along the process call stack, wrapping functions in `scoper:scope/2,3`. _Scope name_ should be an atom, _metadata_ is a map with atom keys. The types:
 
     ```erlang
     -type key()   :: atom().
@@ -23,7 +23,7 @@ Scoooper!
     -type scope() :: key().
     ```
 
-* Add/remove scope metadata via [scoper](src/scoper.erl)`:add_meta/1` and [scoper](src/scoper.erl)`:remove_meta/1`
+* Add/remove scope metadata via `scoper:add_meta/1` and `scoper:remove_meta/1`
 * Use [lager](https://github.com/erlang-lager/lager) or just process dictionary (by default) as metadata storage.
 * Implement your own storage as [scoper_storage](src/scoper_storage.erl) behaviour. Metadata storage is configured via application environment variable `storage`, which should name the module implementing `scoper_storage` behaviour. E.g.:
 
