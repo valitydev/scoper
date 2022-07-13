@@ -6,6 +6,10 @@
 %% woody_event_handler behaviour callbacks
 -export([handle_event/4]).
 
+-ignore_xref([{woody_event_handler, format_event, 3}]).
+-ignore_xref([{woody_event_handler, format_meta, 3}]).
+-ignore_xref([{woody_event_handler, get_event_severity, 2}]).
+
 -type options() :: #{
     event_handler_opts => woody_event_handler:options()
 }.

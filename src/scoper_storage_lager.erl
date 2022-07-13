@@ -9,6 +9,9 @@
 -export([delete/1]).
 -export([collect/0]).
 
+-ignore_xref([{lager, md, 0}]).
+-ignore_xref([{lager, md, 1}]).
+
 %%
 %% scoper_storage behaviour callbacks
 %%
