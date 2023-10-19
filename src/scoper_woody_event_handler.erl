@@ -33,18 +33,18 @@ handle_event(Event, RpcId, Meta, Opts) ->
 %% Otel wraps
 
 -define(IS_START_EVENT(Event),
-    Event =:= 'client begin' orelse
+    (Event =:= 'client begin' orelse
         Event =:= 'call service' orelse
         Event =:= 'client send' orelse
         Event =:= 'client resolve begin' orelse
         Event =:= 'client cache begin' orelse
         Event =:= 'server receive' orelse
-        Event =:= 'invoke service handler'
+        Event =:= 'invoke service handler')
 ).
 
 -define(IS_SPECIAL_EVENT(Event),
-    Event =:= 'internal error' orelse
-        Event =:= 'trace event'
+    (Event =:= 'internal error' orelse
+        Event =:= 'trace event')
 ).
 
 before_event(Event, RpcId, Meta, Opts) when ?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event) ->
