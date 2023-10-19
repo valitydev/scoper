@@ -3,6 +3,13 @@
 %% Commented out to compile the module without woody
 %% -behaviour(woody_event_handler).
 
+-ignore_xref([
+    {woody_event_handler, get_event_severity, 2},
+    {woody_event_handler, format_meta, 3},
+    {woody_event_handler, format_event, 3},
+    {woody_event_handler_otel, handle_event, 4}
+]).
+
 %% woody_event_handler behaviour callbacks
 -export([handle_event/4]).
 
