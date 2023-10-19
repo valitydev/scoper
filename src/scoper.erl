@@ -74,6 +74,7 @@ add_meta(Meta) when map_size(Meta) =:= 0 ->
 add_meta(Meta) ->
     try
         ScopeName = get_current_scope(),
+        ok = set_otel_span_attributes(ScopeName, Meta),
         store(ScopeName, maps:merge(find(ScopeName), Meta))
     catch
         throw:{scoper, no_scopes} ->
@@ -143,3 +144,8 @@ find(Key) ->
 -spec delete(scope()) -> ok.
 delete(Key) ->
     scoper_storage:delete(Key).
+
+-spec set_otel_span_attributes(scope(), meta()) -> ok.
+set_otel_span_attributes(ScopeName, NewMeta) ->
+    _ = otel_span:set_attributes(otel_tracer:current_span_ctx(), genlib_map:flatten_join($., #{ScopeName => NewMeta})),
+    ok.
