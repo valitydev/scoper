@@ -147,5 +147,6 @@ delete(Key) ->
 
 -spec set_otel_span_attributes(scope(), meta()) -> ok.
 set_otel_span_attributes(ScopeName, NewMeta) ->
-    _ = otel_span:set_attributes(otel_tracer:current_span_ctx(), genlib_map:flatten_join($., #{ScopeName => NewMeta})),
+    Attributes = genlib_map:flatten_join($., #{ScopeName => NewMeta}),
+    _ = otel_span:set_attributes(otel_tracer:current_span_ctx(), Attributes),
     ok.
