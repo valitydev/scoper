@@ -42,12 +42,17 @@ handle_event(Event, RpcId, Meta, Opts) ->
         Event =:= 'invoke service handler'
 ).
 
-before_event(Event, RpcId, Meta, Opts) when ?IS_START_EVENT(Event) ->
+-define(IS_SPECIAL_EVENT(Event),
+    Event =:= 'internal error' orelse
+        Event =:= 'trace event'
+).
+
+before_event(Event, RpcId, Meta, Opts) when ?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event) ->
     woody_event_handler_otel:handle_event(Event, RpcId, Meta, Opts);
 before_event(_Event, _RpcId, _Meta, _Opts) ->
     ok.
 
-after_event(Event, RpcId, Meta, Opts) when not ?IS_START_EVENT(Event) ->
+after_event(Event, RpcId, Meta, Opts) when not (?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event)) ->
     woody_event_handler_otel:handle_event(Event, RpcId, Meta, Opts);
 after_event(_Event, _RpcId, _Meta, _Opts) ->
     ok.
