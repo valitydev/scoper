@@ -2,6 +2,8 @@
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
+-include_lib("opentelemetry_api/include/opentelemetry.hrl").
+-include_lib("opentelemetry/include/otel_span.hrl").
 
 -export([all/0]).
 -export([init_per_suite/1]).
@@ -33,6 +35,8 @@ all() ->
 -spec init_per_suite(config()) -> config().
 init_per_suite(C) ->
     {ok, Apps1} = application:ensure_all_started(scoper),
+    ok = application:set_env([{opentelemetry, [{span_processor, simple}]}]),
+    ok = application:start(opentelemetry),
     {ok, Apps2} = application:ensure_all_started(woody),
     ok = logger:set_primary_config(level, debug),
     [{apps, Apps1 ++ Apps2} | C].
@@ -60,6 +64,7 @@ handler_logs_events(_C) ->
     %% NOTE
     %% Test that scoper properly handles woody events.
     %% The purpose is to catch regressions early against woody master.
+    ok = otel_simple_processor:set_exporter(otel_exporter_pid, self()),
     ServerId = ?FUNCTION_NAME,
     HandlerId = ?FUNCTION_NAME,
     {ok, Pid, Url} = start_woody_server(ServerId),
@@ -73,6 +78,7 @@ handler_logs_events(_C) ->
     {ok, #'GeneratedID'{}} = call_woody_service('GenerateID', {{snowflake, #'SnowflakeSchema'{}}}, Url),
     ok = stop_woody_server(Pid),
     ok = logger:remove_handler(HandlerId),
+    {Logs, Spans} = discriminate_msg(flush_msg_queue(1000)),
     ?assertMatch(
         [
             {relay, HandlerId, started},
@@ -156,8 +162,37 @@ handler_logs_events(_C) ->
                 })},
             {relay, HandlerId, terminated}
         ],
-        flush_msg_queue(1000)
+        Logs
+    ),
+    ?assertMatch(
+        [
+            {span, #span{
+                trace_id = TraceId,
+                parent_span_id = SpanId,
+                name = <<"server Generator:GenerateID">>,
+                kind = ?SPAN_KIND_SERVER
+            }},
+            {span, #span{
+                trace_id = TraceId,
+                span_id = SpanId,
+                name = <<"client Generator:GenerateID">>,
+                kind = ?SPAN_KIND_CLIENT
+            }}
+        ],
+        Spans
     ).
+
+discriminate_msg(Messages) ->
+    {Logs, Spans} = lists:foldl(
+        fun
+            ({span, _} = M, {L, S}) -> {L, [M | S]};
+            ({relay, handler_logs_events, _} = M, {L, S}) -> {[M | L], S};
+            (_M, {L, S}) -> {L, S}
+        end,
+        {[], []},
+        Messages
+    ),
+    {lists:reverse(Logs), lists:reverse(Spans)}.
 
 flush_msg_queue(Timeout) ->
     receive
