@@ -52,6 +52,7 @@ add_scope(Name, Meta) ->
             ok = error_logger:warning_msg("Scoper: attempt to add taken scope ~p; scopes: ~p", [Name, Scopes]);
         false ->
             set_scope_names([Name | Scopes]),
+            set_otel_span_attributes(Name, Meta),
             store(Name, Meta)
     end.
 
@@ -74,6 +75,7 @@ add_meta(Meta) when map_size(Meta) =:= 0 ->
 add_meta(Meta) ->
     try
         ScopeName = get_current_scope(),
+        set_otel_span_attributes(ScopeName, Meta),
         store(ScopeName, maps:merge(find(ScopeName), Meta))
     catch
         throw:{scoper, no_scopes} ->
@@ -143,3 +145,11 @@ find(Key) ->
 -spec delete(scope()) -> ok.
 delete(Key) ->
     scoper_storage:delete(Key).
+
+-spec set_otel_span_attributes(scope(), meta()) -> ok.
+set_otel_span_attributes(_Name, NewMeta) when map_size(NewMeta) =:= 0 ->
+    ok;
+set_otel_span_attributes(Name, NewMeta) ->
+    Attributes = genlib_map:flatten_join($., #{Name => NewMeta}),
+    _ = otel_span:set_attributes(otel_tracer:current_span_ctx(), Attributes),
+    ok.

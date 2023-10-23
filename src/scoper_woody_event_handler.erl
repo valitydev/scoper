@@ -6,9 +6,10 @@
 %% woody_event_handler behaviour callbacks
 -export([handle_event/4]).
 
--ignore_xref([{woody_event_handler, format_event, 3}]).
--ignore_xref([{woody_event_handler, format_meta, 3}]).
--ignore_xref([{woody_event_handler, get_event_severity, 2}]).
+-ignore_xref({woody_event_handler, get_event_severity, 2}).
+-ignore_xref({woody_event_handler, format_meta, 3}).
+-ignore_xref({woody_event_handler, format_event, 3}).
+-ignore_xref({woody_event_handler_otel, handle_event, 4}).
 
 -type options() :: #{
     event_handler_opts => woody_event_handler:options()
@@ -24,27 +25,61 @@
     RpcId :: woody:rpc_id() | undefined,
     Meta :: woody_event_handler:event_meta(),
     Opts :: options().
+handle_event(Event, RpcId, Meta, Opts) ->
+    ok = before_event(Event, RpcId, Meta, Opts),
+    _ = handle_event_(Event, RpcId, Meta, Opts),
+    ok = after_event(Event, RpcId, Meta, Opts).
+
+%% Otel wraps
+
+-define(IS_START_EVENT(Event),
+    (Event =:= 'client begin' orelse
+        Event =:= 'call service' orelse
+        Event =:= 'client send' orelse
+        Event =:= 'client resolve begin' orelse
+        Event =:= 'client cache begin' orelse
+        Event =:= 'server receive' orelse
+        Event =:= 'invoke service handler')
+).
+
+-define(IS_SPECIAL_EVENT(Event),
+    (Event =:= 'internal error' orelse
+        Event =:= 'trace event')
+).
+
+before_event(Event, RpcId, Meta, Opts) when ?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event) ->
+    woody_event_handler_otel:handle_event(Event, RpcId, Meta, Opts);
+before_event(_Event, _RpcId, _Meta, _Opts) ->
+    ok.
+
+after_event(Event, RpcId, Meta, Opts) when not (?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event)) ->
+    woody_event_handler_otel:handle_event(Event, RpcId, Meta, Opts);
+after_event(_Event, _RpcId, _Meta, _Opts) ->
+    ok.
+
+%% Scope handling
+
 %% client scoping
-handle_event('client begin', _RpcID, _Meta, _Opts) ->
+handle_event_('client begin', _RpcID, _Meta, _Opts) ->
     scoper:add_scope(get_scope_name(client));
-handle_event('client cache begin', _RpcID, _Meta, _Opts) ->
+handle_event_('client cache begin', _RpcID, _Meta, _Opts) ->
     scoper:add_scope(get_scope_name(caching_client));
-handle_event('client end', _RpcID, _Meta, _Opts) ->
+handle_event_('client end', _RpcID, _Meta, _Opts) ->
     scoper:remove_scope();
-handle_event('client cache end', _RpcID, _Meta, _Opts) ->
+handle_event_('client cache end', _RpcID, _Meta, _Opts) ->
     scoper:remove_scope();
 %% server scoping
-handle_event(Event = 'server receive', RpcID, RawMeta, Opts) ->
+handle_event_(Event = 'server receive', RpcID, RawMeta, Opts) ->
     ok = add_server_meta(RpcID),
     do_handle_event(Event, RpcID, RawMeta, Opts);
-handle_event(Event = 'server send', RpcID, RawMeta, Opts) ->
+handle_event_(Event = 'server send', RpcID, RawMeta, Opts) ->
     ok = do_handle_event(Event, RpcID, RawMeta, Opts),
     remove_server_meta();
 %% special cases
-handle_event(Event = 'internal error', RpcID, RawMeta, Opts) ->
+handle_event_(Event = 'internal error', RpcID, RawMeta, Opts) ->
     ok = do_handle_event(Event, RpcID, RawMeta, Opts),
     final_error_cleanup(RawMeta);
-handle_event(Event = 'trace event', RpcID, RawMeta = #{role := Role}, Opts) ->
+handle_event_(Event = 'trace event', RpcID, RawMeta = #{role := Role}, Opts) ->
     case lists:member(get_scope_name(Role), scoper:get_scope_names()) of
         true ->
             do_handle_event(Event, RpcID, RawMeta, Opts);
@@ -55,7 +90,7 @@ handle_event(Event = 'trace event', RpcID, RawMeta = #{role := Role}, Opts) ->
             )
     end;
 %% the rest
-handle_event(Event, RpcID, RawMeta, Opts) ->
+handle_event_(Event, RpcID, RawMeta, Opts) ->
     do_handle_event(Event, RpcID, RawMeta, Opts).
 
 %%
