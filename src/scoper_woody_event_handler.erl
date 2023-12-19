@@ -6,7 +6,7 @@
 %% woody_event_handler behaviour callbacks
 -export([handle_event/4]).
 
--ignore_xref({woody_event_handler, get_event_severity, 2}).
+-ignore_xref({woody_event_handler, get_event_severity, 3}).
 -ignore_xref({woody_event_handler, format_meta, 3}).
 -ignore_xref({woody_event_handler, format_event, 3}).
 -ignore_xref({woody_event_handler_otel, handle_event, 4}).
@@ -109,7 +109,8 @@ handle_event_(Event, RpcID, RawMeta, Opts) ->
 ]).
 
 do_handle_event(Event, RpcID, EvMeta = #{role := Role}, Opts) ->
-    Level = woody_event_handler:get_event_severity(Event, EvMeta),
+    EvHandlerOptions = get_event_handler_options(Opts),
+    Level = woody_event_handler:get_event_severity(Event, EvMeta, EvHandlerOptions),
     Meta = woody_event_handler:format_meta(Event, EvMeta, ?REQUISITE_META),
     ok = scoper:add_meta(Meta),
     log_event(Level, Event, Role, EvMeta, RpcID, Opts);
