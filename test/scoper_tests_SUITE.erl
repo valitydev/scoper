@@ -185,7 +185,7 @@ match_scoper_state_and_meta(State) ->
 
 match_scoper_state_and_meta([], #{}) ->
     ok;
-match_scoper_state_and_meta(State, Data = #{?TAG := State}) ->
+match_scoper_state_and_meta(State, #{?TAG := State} = Data) ->
     _ = lists:foldr(
         fun(Scope, Acc) ->
             do_match_scoper_state_and_meta(Scope, [Scope | Acc], Data)

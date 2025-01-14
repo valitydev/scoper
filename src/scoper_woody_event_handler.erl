@@ -20,15 +20,15 @@
 %%
 %% woody_event_handler behaviour callbacks
 %%
--spec handle_event(Event, RpcId, Meta, Opts) -> ok when
+-spec handle_event(Event, RpcID, Meta, Opts) -> ok when
     Event :: woody_event_handler:event(),
-    RpcId :: woody:rpc_id() | undefined,
+    RpcID :: woody:rpc_id() | undefined,
     Meta :: woody_event_handler:event_meta(),
     Opts :: options().
-handle_event(Event, RpcId, Meta, Opts) ->
-    ok = before_event(Event, RpcId, Meta, Opts),
-    _ = handle_event_(Event, RpcId, Meta, Opts),
-    ok = after_event(Event, RpcId, Meta, Opts).
+handle_event(Event, RpcID, Meta, Opts) ->
+    ok = before_event(Event, RpcID, Meta, Opts),
+    _ = handle_event_(Event, RpcID, Meta, Opts),
+    ok = after_event(Event, RpcID, Meta, Opts).
 
 %% Otel wraps
 
@@ -47,14 +47,14 @@ handle_event(Event, RpcId, Meta, Opts) ->
         Event =:= 'trace event')
 ).
 
-before_event(Event, RpcId, Meta, Opts) when ?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event) ->
-    woody_event_handler_otel:handle_event(Event, RpcId, Meta, Opts);
-before_event(_Event, _RpcId, _Meta, _Opts) ->
+before_event(Event, RpcID, Meta, Opts) when ?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event) ->
+    woody_event_handler_otel:handle_event(Event, RpcID, Meta, Opts);
+before_event(_Event, _RpcID, _Meta, _Opts) ->
     ok.
 
-after_event(Event, RpcId, Meta, Opts) when not (?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event)) ->
-    woody_event_handler_otel:handle_event(Event, RpcId, Meta, Opts);
-after_event(_Event, _RpcId, _Meta, _Opts) ->
+after_event(Event, RpcID, Meta, Opts) when not (?IS_START_EVENT(Event) orelse ?IS_SPECIAL_EVENT(Event)) ->
+    woody_event_handler_otel:handle_event(Event, RpcID, Meta, Opts);
+after_event(_Event, _RpcID, _Meta, _Opts) ->
     ok.
 
 %% Scope handling
@@ -69,17 +69,17 @@ handle_event_('client end', _RpcID, _Meta, _Opts) ->
 handle_event_('client cache end', _RpcID, _Meta, _Opts) ->
     scoper:remove_scope();
 %% server scoping
-handle_event_(Event = 'server receive', RpcID, RawMeta, Opts) ->
+handle_event_('server receive' = Event, RpcID, RawMeta, Opts) ->
     ok = add_server_meta(RpcID),
     do_handle_event(Event, RpcID, RawMeta, Opts);
-handle_event_(Event = 'server send', RpcID, RawMeta, Opts) ->
+handle_event_('server send' = Event, RpcID, RawMeta, Opts) ->
     ok = do_handle_event(Event, RpcID, RawMeta, Opts),
     remove_server_meta();
 %% special cases
-handle_event_(Event = 'internal error', RpcID, RawMeta, Opts) ->
+handle_event_('internal error' = Event, RpcID, RawMeta, Opts) ->
     ok = do_handle_event(Event, RpcID, RawMeta, Opts),
     final_error_cleanup(RawMeta);
-handle_event_(Event = 'trace event', RpcID, RawMeta = #{role := Role}, Opts) ->
+handle_event_('trace event' = Event, RpcID, #{role := Role} = RawMeta, Opts) ->
     case lists:member(get_scope_name(Role), scoper:get_scope_names()) of
         true ->
             do_handle_event(Event, RpcID, RawMeta, Opts);
@@ -108,7 +108,7 @@ handle_event_(Event, RpcID, RawMeta, Opts) ->
     execution_duration_ms
 ]).
 
-do_handle_event(Event, RpcID, EvMeta = #{role := Role}, Opts) ->
+do_handle_event(Event, RpcID, #{role := Role} = EvMeta, Opts) ->
     EvHandlerOptions = get_event_handler_options(Opts),
     Level = woody_event_handler:get_event_severity(Event, EvMeta, EvHandlerOptions),
     Meta = woody_event_handler:format_meta(Event, EvMeta, ?REQUISITE_META),
