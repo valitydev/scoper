@@ -1,7 +1,7 @@
 {"1.2.0",
 [{<<"genlib">>,
   {git,"https://github.com/valitydev/genlib.git",
-       {ref,"f6074551d6586998e91a97ea20acb47241254ff3"}},
+       {ref,"d2324089afbbd9630e85fac554620f1de0b33dfe"}},
   0},
  {<<"opentelemetry_api">>,{pkg,<<"opentelemetry_api">>,<<"1.2.1">>},0},
  {<<"opentelemetry_semantic_conventions">>,
