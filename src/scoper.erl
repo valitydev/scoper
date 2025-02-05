@@ -126,7 +126,7 @@ set_scope_names(Names) ->
     store(?TAG, Names).
 
 -spec remove_scope(scope(), [scope()]) -> ok.
-remove_scope(Name, Scopes = []) ->
+remove_scope(Name, [] = Scopes) ->
     ok = error_logger:warning_msg("Scoper: attempt to remove scope ~p from the scopes stack: ~p", [Name, Scopes]);
 remove_scope(Name, [Name | Rest]) ->
     ok = delete(Name),

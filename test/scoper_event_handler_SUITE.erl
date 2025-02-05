@@ -204,7 +204,7 @@ flush_msg_queue(Timeout) ->
 
 -define(SERVICE, {scp_test_thrift, 'Generator'}).
 
-start_woody_server(Id) ->
+start_woody_server(ID) ->
     Path = "/gen",
     ServerOpts = #{
         handlers => [{Path, {?SERVICE, ?MODULE}}],
@@ -212,8 +212,8 @@ start_woody_server(Id) ->
         ip => {127, 0, 0, 1},
         port => 0
     },
-    {ok, SupPid} = genlib_adhoc_supervisor:start_link(#{}, [woody_server:child_spec(Id, ServerOpts)]),
-    {IP, Port} = woody_server:get_addr(Id, ServerOpts),
+    {ok, SupPid} = genlib_adhoc_supervisor:start_link(#{}, [woody_server:child_spec(ID, ServerOpts)]),
+    {IP, Port} = woody_server:get_addr(ID, ServerOpts),
     Url = genlib:format("http://~s:~p~s", [inet:ntoa(IP), Port, Path]),
     {ok, SupPid, Url}.
 
@@ -248,7 +248,7 @@ log(LogEvent, #{id := Name, module := ?MODULE, config := Config}) ->
     ok.
 
 -spec adding_handler(logger:handler_config()) -> {ok, logger:handler_config()}.
-adding_handler(HConfig = #{id := Name, module := ?MODULE, config := Config}) ->
+adding_handler(#{id := Name, module := ?MODULE, config := Config} = HConfig) ->
     Pid = maps:get(forward, Config),
     Pid ! {relay, Name, started},
     {ok, HConfig}.
